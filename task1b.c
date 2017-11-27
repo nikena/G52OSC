@@ -43,18 +43,18 @@ struct process *returnhead(struct process **head) {
 
 void print() {
     if (head->iState != FINISHED) {
-            avgresponsetime+=responsetime;
-            printf("Process Id = %d, Previous Burst Time = %d, New Burst Time = %d, Response time = %ld\n", head->iProcessId, prevburst, newburst, responsetime);
-            next = returnhead(&head);
-            add(&head, next, &tail);
+        avgresponsetime+=responsetime;
+        printf("Process Id = %d, Previous Burst Time = %d, New Burst Time = %d, Response time = %ld\n", head->iProcessId, prevburst, newburst, responsetime);
+         next = returnhead(&head);
+         add(&head, next, &tail);
 
-        } else if(state == 1){
-            state --;
-            avgresponsetime +=responsetime;
-            avgturnaroundtime += turnaroundtime;
-            printf("Process Id = %d, Previous Burst Time = %d, New Burst Time = %d, Response time = %ld, Turn Around Time = %ld \n", head->iProcessId, prevburst, newburst, responsetime, turnaroundtime);
+     } else if(state == 1){
+         state --;
+         avgresponsetime +=responsetime;
+         avgturnaroundtime += turnaroundtime;
+         printf("Process Id = %d, Previous Burst Time = %d, New Burst Time = %d, Response time = %ld, Turn Around Time = %ld \n", head->iProcessId, prevburst, newburst, responsetime, turnaroundtime);
 
-            freememory(&head);
+         freememory(&head);
 
         } else {
             avgturnaroundtime += turnaroundtime;
@@ -76,8 +76,11 @@ int main(void) {
         if(head->iState == NEW){
             state = 1;
         }
+
         prevburst = head->iBurstTime;
+
         simulateRoundRobinProcess(head, &(head->oTimeCreated), &(oTimeEnd));
+
         newburst = head-> iBurstTime;
         turnaroundtime += getDifferenceInMilliSeconds(head->oTimeCreated, oTimeEnd);
         responsetime = turnaroundtime -(prevburst-newburst);
