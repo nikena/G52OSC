@@ -9,8 +9,14 @@
 sem_t empty;
 sem_t full;
 pthread_mutex_t lock;
+
 struct process *tail = NULL;
 struct process *head = NULL;
+
+struct process *headq1 = NULL;
+struct process *headq2 = NULL;
+struct process *tailq1 = NULL;
+struct process *tailq2 = NULL;
 
 int avgresponse = 0;
 int avgturnaround = 0;
@@ -101,7 +107,7 @@ void *threadconsume(void * cindex){
             
             processid = proc->iProcessId;
             prevburst = proc->iBurstTime;
-            simulateRoundRobinProcess(proc, &oTimeStart, &oTimeEnd);
+            simulateBlockingRoundRobinProcess(proc, &oTimeStart, &oTimeEnd);
             newburst = proc->iBurstTime;
             istate = proc->iState;
             turnaroundtime = getDifferenceInMilliSeconds(proc->oTimeCreated, oTimeEnd);
@@ -117,11 +123,24 @@ void *threadconsume(void * cindex){
                 sumturnaround += turnaroundtime;
             }
 
-            if(proc->iState != FINISHED) {
+            if(proc->iState != READY) {
+               state--;
                pthread_mutex_lock(&lock);
                add(&head, proc, &tail);
                sem_post(&full);
                pthread_mutex_unlock(&lock);
+
+            } else if(proc->iState == BLOCKED) {
+                sem_post(&empty);    
+                if(proc->iEventType == 1) {
+                    pthread_mutex_lock(&lock);
+                    add(&headq1, proc, &tailq1);
+                    pthread_mutex_unlock(&lock);
+                } else {
+                    pthread_mutex_lock(&lock);
+                    add(&headq2, proc, &tailq2);
+                    pthread_mutex_unlock(&lock);
+                }
 
             } else if(proc->iState == FINISHED) {
                 sem_post(&empty);
@@ -140,6 +159,7 @@ int main(void) {
 
     pthread_t producer;
     pthread_t c[NUMBER_OF_CONSUMERS];
+    pthread_t eventManager;
 
     pthread_create(&producer, NULL, threadproduce, NULL);
 
@@ -149,12 +169,17 @@ int main(void) {
         pthread_create(&(c[i]), NULL, threadconsume, (void *) &consumerid[i]);
     }
     
+    pthread_create(&eventManager, NULL, eventQueues, NULL);
 
     pthread_join(producer, NULL);
+
     sem_post(&full);   
+
     for(int n = 0; n < NUMBER_OF_CONSUMERS; n++) {
         pthread_join(c[n], NULL);
     }
+
+    pthread_join(eventManager, NULL);
 
     printf("Average response time = %f \nAverage turnaround time = %f\n",
             (1.0* avgresponse/NUMBER_OF_PROCESSES), (1.0* avgturnaround/NUMBER_OF_PROCESSES));
