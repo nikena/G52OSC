@@ -133,10 +133,12 @@ void *threadconsume(void * cindex){
             } else if(proc->iState == BLOCKED) {
                 sem_post(&empty);    
                 if(proc->iEventType == 1) {
+                    printf("Process %d blocked on event type 1\n", processid);
                     pthread_mutex_lock(&lock);
                     add(&headq1, proc, &tailq1);
                     pthread_mutex_unlock(&lock);
                 } else {
+                    printf("Process %d blocked on event type 2\n", processid);
                     pthread_mutex_lock(&lock);
                     add(&headq2, proc, &tailq2);
                     pthread_mutex_unlock(&lock);
@@ -147,6 +149,26 @@ void *threadconsume(void * cindex){
                 free(proc);
             }
 
+    }
+}
+
+void *eventQueue() {
+    
+    if(headq1 != NULL) {
+        printf("Process %d in event queue 1 unblocked\n", headq1->iProcessId);
+        pthread_mutex_lock(&lock);
+        add(&head, headq1, &tail);
+        pthread_mutex_unlock(&lock);
+        sem_post(&full);
+    
+    } else if (headq2 != NULL) {
+        printf("Process %d in event queue 2 unblocked\n", headq2->iProcessId);
+        pthread_mutex_lock(&lock);
+        add(&head, headq2, &tail);
+        pthread_mutex_unlock(&lock);
+        sem_post(&full);
+    } else {
+        sleep(0.2);
     }
 }
 
@@ -169,7 +191,7 @@ int main(void) {
         pthread_create(&(c[i]), NULL, threadconsume, (void *) &consumerid[i]);
     }
     
-    pthread_create(&eventManager, NULL, eventQueues, NULL);
+    pthread_create(&eventManager, NULL, eventQueue, NULL);
 
     pthread_join(producer, NULL);
 
