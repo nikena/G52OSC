@@ -9,6 +9,8 @@
 sem_t empty;
 sem_t full;
 pthread_mutex_t lock;
+pthread_mutex_t q1;
+pthread_mutex_t q2;
 
 struct process *tail = NULL;
 struct process *head = NULL;
@@ -86,93 +88,107 @@ void *threadconsume(void * cindex){
     struct process *proc = NULL;
     while(1){
         sem_wait(&full);
-    
-
-            pthread_mutex_lock(&lock);
-            if(head == NULL){
-                pthread_mutex_unlock(&lock);
-                avgresponse += sumresponse;
-                avgturnaround += sumturnaround;
-                sem_post(&full);
-                pthread_exit(NULL);
-            }
-            proc = getprocess(&head);
+        pthread_mutex_lock(&lock);
+        if(head == NULL){
             pthread_mutex_unlock(&lock);
+            avgresponse += sumresponse;
+            avgturnaround += sumturnaround;
+            sem_post(&full);
+            pthread_exit(NULL);
+        }
 
-            if(proc->iState == NEW) {
-                state = 1;
-            } else {
-                state = 0;
-            }
+        proc = getprocess(&head);
+        pthread_mutex_unlock(&lock);
+
+        if(proc->iState == NEW) {
+            state = 1;
+        } else {
+            state = 0;
+        }
             
-            processid = proc->iProcessId;
-            prevburst = proc->iBurstTime;
-            simulateBlockingRoundRobinProcess(proc, &oTimeStart, &oTimeEnd);
-            newburst = proc->iBurstTime;
-            istate = proc->iState;
-            turnaroundtime = getDifferenceInMilliSeconds(proc->oTimeCreated, oTimeEnd);
-            responsetime = getDifferenceInMilliSeconds(proc->oTimeCreated, oTimeStart);
-            print(processid, istate, prevburst, newburst, state, consumer_id, turnaroundtime, responsetime);
+        processid = proc->iProcessId;
+        prevburst = proc->iBurstTime;
+        simulateBlockingRoundRobinProcess(proc, &oTimeStart, &oTimeEnd);
+        newburst = proc->iBurstTime;
+        istate = proc->iState;
+        turnaroundtime = getDifferenceInMilliSeconds(proc->oTimeCreated, oTimeEnd);
+        responsetime = getDifferenceInMilliSeconds(proc->oTimeCreated, oTimeStart);
+        print(processid, istate, prevburst, newburst, state, consumer_id, turnaroundtime, responsetime);
 
-            if(proc->iState != FINISHED){
-                sumresponse += responsetime;
-            } else if(state == 1) {
-                sumresponse += responsetime;
-                sumturnaround += turnaroundtime;
+        if(proc->iState != FINISHED){
+            sumresponse += responsetime;
+        } else if(state == 1) {
+            sumresponse += responsetime;
+            sumturnaround += turnaroundtime;
+        } else {
+            sumturnaround += turnaroundtime;
+        }
+
+        if(proc->iState == READY) {
+           state--;
+           pthread_mutex_lock(&lock);
+           add(&head, proc, &tail);
+           sem_post(&full);
+           pthread_mutex_unlock(&lock);
+
+        } else if(proc->iState == BLOCKED) {
+            sem_post(&empty);    
+            if(proc->iEventType == 1) {
+                printf("Process %d blocked on event type 1\n", processid);
+                pthread_mutex_lock(&lock);
+                add(&headq1, proc, &tailq1);
+                pthread_mutex_unlock(&lock);
             } else {
-                sumturnaround += turnaroundtime;
+                printf("Process %d blocked on event type 2\n", processid);
+                pthread_mutex_lock(&lock);
+                add(&headq2, proc, &tailq2);
+                pthread_mutex_unlock(&lock);
             }
 
-            if(proc->iState == READY) {
-               state--;
-               pthread_mutex_lock(&lock);
-               add(&head, proc, &tail);
-               sem_post(&full);
-               pthread_mutex_unlock(&lock);
-
-            } else if(proc->iState == BLOCKED) {
-                sem_post(&empty);    
-                if(proc->iEventType == 1) {
-                    printf("Process %d blocked on event type 1\n", processid);
-                    pthread_mutex_lock(&lock);
-                    add(&headq1, proc, &tailq1);
-                    pthread_mutex_unlock(&lock);
-                } else {
-                    printf("Process %d blocked on event type 2\n", processid);
-                    pthread_mutex_lock(&lock);
-                    add(&headq2, proc, &tailq2);
-                    pthread_mutex_unlock(&lock);
-                }
-
-            } else if(proc->iState == FINISHED) {
-                sem_post(&empty);
-                free(proc);
-            }
-
+        } else {
+            sem_post(&empty);
+            free(proc);
+        }
     }
 }
 
 void *eventQueue() {
     struct process *temp = NULL;
+    int timer = 10;
 
     while(1){
-       if(headq1 != NULL) {
-            printf("Process %d in event queue 1 unblocked\n", headq1->iProcessId);
-            pthread_mutex_lock(&lock);
-            temp = getprocess(&headq1);
-            add(&head, temp, &tail);
-            pthread_mutex_unlock(&lock);
-            sem_post(&full);
-    
-        } else if (headq2 != NULL) {
+
+       usleep(20000);
+       
+       pthread_mutex_lock(&q1);
+       if (headq1 != NULL) {
+           timer = 10;
+           printf("Process %d in event queue 1 unblocked\n", headq1->iProcessId);
+           temp = getprocess(&headq1);
+           add(&head, temp, &tail);
+           pthread_mutex_unlock(&q1);
+           sem_post(&full);
+       }
+       pthread_mutex_unlock(&q1);
+
+       pthread_mutex_lock(&q2);
+        if (headq2 != NULL) {
+            timer = 10;
             printf("Process %d in event queue 2 unblocked\n", headq2->iProcessId);
-            pthread_mutex_lock(&lock);
             temp = getprocess(&headq2);
             add(&head, temp, &tail);
-            pthread_mutex_unlock(&lock);
+            pthread_mutex_unlock(&q2);
             sem_post(&full);
-        } else {
-            usleep(20000);
+        }
+        pthread_mutex_unlock(&q2);
+        if (headq1 == NULL && headq2 == NULL){
+            pthread_mutex_lock(&lock);
+            if (timer-- == 0 && head == NULL) {
+                pthread_mutex_unlock(&lock);
+                printf("Exiting eventqueue\n");
+                pthread_exit(NULL);
+            }
+            pthread_mutex_unlock(&lock);
         }
     }
 }
@@ -183,6 +199,8 @@ int main(void) {
     sem_init(&full, 0, 0);
 
     pthread_mutex_init(&lock,NULL);
+    pthread_mutex_init(&q1, NULL);
+    pthread_mutex_init(&q2, NULL);
 
     pthread_t producer;
     pthread_t c[NUMBER_OF_CONSUMERS];
@@ -199,17 +217,17 @@ int main(void) {
     pthread_create(&eventManager, NULL, eventQueue, NULL);
 
     pthread_join(producer, NULL);
-
+    pthread_join(eventManager, NULL);
 
     sem_post(&full);   
 
     for(int n = 0; n < NUMBER_OF_CONSUMERS; n++) {
         pthread_join(c[n], NULL);
     }
+
     
     printf("Consumers have terminated\n");
 
-    pthread_join(eventManager, NULL);
 
     printf("Average response time = %f \nAverage turnaround time = %f\n",
             (1.0* avgresponse/NUMBER_OF_PROCESSES), (1.0* avgturnaround/NUMBER_OF_PROCESSES));
