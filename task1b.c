@@ -27,14 +27,7 @@ void add(struct process **head, struct process *next, struct process **tail) {
     }
 }
 
-void freememory(struct process **head) {
-    struct process *temp = NULL;
-    temp = *head;
-    *head = (*head)->oNext;
-    free(temp);
-}
-
-struct process *returnhead(struct process **head) {
+struct process *getprocess(struct process **head) {
     struct process *temp = NULL;
     temp = *head;
     *head =(*head)->oNext;
@@ -43,28 +36,19 @@ struct process *returnhead(struct process **head) {
 
 void print() {
     if (head->iState != FINISHED) {
-        avgresponsetime+=responsetime;
         printf("Process Id = %d, Previous Burst Time = %d, New Burst Time = %d, Response time = %ld\n", head->iProcessId, prevburst, newburst, responsetime);
-         next = returnhead(&head);
-         add(&head, next, &tail);
 
      } else if(state == 1){
-         state --;
-         avgresponsetime +=responsetime;
-         avgturnaroundtime += turnaroundtime;
          printf("Process Id = %d, Previous Burst Time = %d, New Burst Time = %d, Response time = %ld, Turn Around Time = %ld \n", head->iProcessId, prevburst, newburst, responsetime, turnaroundtime);
 
-         freememory(&head);
-
         } else {
-            avgturnaroundtime += turnaroundtime;
             printf("Process Id = %d, Previous Burst Time = %d, New Burst Time = %d, Turn Around Time = %ld \n", head->iProcessId, prevburst, newburst, turnaroundtime);
-            freememory(&head);
     }
 }
 
 int main(void) {
     struct timeval oTimeEnd;
+    struct process *temp = NULL;
 
     for(int n = 0; n<NUMBER_OF_PROCESSES; n++) {
         next = generateProcess();
@@ -75,6 +59,8 @@ int main(void) {
 
         if(head->iState == NEW){
             state = 1;
+        } else {
+            state = 0;
         }
 
         prevburst = head->iBurstTime;
@@ -84,7 +70,26 @@ int main(void) {
         newburst = head-> iBurstTime;
         turnaroundtime += getDifferenceInMilliSeconds(head->oTimeCreated, oTimeEnd);
         responsetime = turnaroundtime -(prevburst-newburst);
+
         print();
+
+        if(head->iState != FINISHED) {
+            avgresponsetime += responsetime;
+            next = getprocess(&head);
+            add(&head, next, &tail);
+
+        } else if (state == 1) {
+            avgresponsetime += responsetime;
+            avgturnaroundtime += turnaroundtime;
+            temp = getprocess(&head);
+            free(temp);
+            
+
+        } else {
+            avgturnaroundtime += turnaroundtime;
+            temp = getprocess(&head);
+            free(temp);
+        }
     }
 
     printf("Average response time  = %f \nAverage turnaround time = %f\n",(1.0* avgresponsetime/NUMBER_OF_PROCESSES),(1.0*avgturnaroundtime/NUMBER_OF_PROCESSES));
