@@ -200,11 +200,14 @@ int main(void) {
 
     pthread_join(producer, NULL);
 
+
     sem_post(&full);   
 
     for(int n = 0; n < NUMBER_OF_CONSUMERS; n++) {
         pthread_join(c[n], NULL);
     }
+    
+    printf("Consumers have terminated\n");
 
     pthread_join(eventManager, NULL);
 
