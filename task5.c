@@ -123,7 +123,7 @@ void *threadconsume(void * cindex){
                 sumturnaround += turnaroundtime;
             }
 
-            if(proc->iState != READY) {
+            if(proc->iState == READY) {
                state--;
                pthread_mutex_lock(&lock);
                add(&head, proc, &tail);
@@ -153,22 +153,27 @@ void *threadconsume(void * cindex){
 }
 
 void *eventQueue() {
+    struct process *temp = NULL;
+
+    while(1){
+       if(headq1 != NULL) {
+            printf("Process %d in event queue 1 unblocked\n", headq1->iProcessId);
+            pthread_mutex_lock(&lock);
+            temp = getprocess(&headq1);
+            add(&head, temp, &tail);
+            pthread_mutex_unlock(&lock);
+            sem_post(&full);
     
-    if(headq1 != NULL) {
-        printf("Process %d in event queue 1 unblocked\n", headq1->iProcessId);
-        pthread_mutex_lock(&lock);
-        add(&head, headq1, &tail);
-        pthread_mutex_unlock(&lock);
-        sem_post(&full);
-    
-    } else if (headq2 != NULL) {
-        printf("Process %d in event queue 2 unblocked\n", headq2->iProcessId);
-        pthread_mutex_lock(&lock);
-        add(&head, headq2, &tail);
-        pthread_mutex_unlock(&lock);
-        sem_post(&full);
-    } else {
-        sleep(0.2);
+        } else if (headq2 != NULL) {
+            printf("Process %d in event queue 2 unblocked\n", headq2->iProcessId);
+            pthread_mutex_lock(&lock);
+            temp = getprocess(&headq2);
+            add(&head, temp, &tail);
+            pthread_mutex_unlock(&lock);
+            sem_post(&full);
+        } else {
+            usleep(20000);
+        }
     }
 }
 
