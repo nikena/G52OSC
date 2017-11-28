@@ -40,6 +40,8 @@ int main(void) {
     struct timeval oTimeEnd;
     long int responsetime = 0;
     long int turnaroundtime = 0;
+    int avgresponse = 0;
+    int avgturnaround = 0;
     int prevburst = 0;
 
     for(int n = 0; n<NUMBER_OF_PROCESSES; n++) {
@@ -48,15 +50,17 @@ int main(void) {
     }
 
     while(head != NULL) {
-        printf("%d \n", head->iBurstTime);
         prevburst = head->iBurstTime;
         simulateSJFProcess(head, &(head->oTimeCreated), &(oTimeEnd));
         /*calculates the turnaround time*/
         turnaroundtime += getDifferenceInMilliSeconds(head->oTimeCreated, oTimeEnd);
         responsetime = turnaroundtime - prevburst;
+        avgresponse += responsetime;
+        avgturnaround += turnaroundtime;
+        printf("Process Id = %d, Previous Burst Time = %d, New Burst Time = %d, Response Time = %ld, Turn Around Time = %ld\n", head->iProcessId, prevburst, head->iBurstTime, responsetime, turnaroundtime);
         head = freememory(head);
     }
     
-    printf("Turnaroundtime is %ld and response time is %ld \n", turnaroundtime, responsetime);
+    printf("Average response time = %f\nAverage turn around time = %f\n",(1.0 * avgresponse/NUMBER_OF_PROCESSES),(1.0 * avgturnaround/NUMBER_OF_PROCESSES));
     exit(EXIT_SUCCESS);
 }
