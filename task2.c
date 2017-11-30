@@ -5,6 +5,7 @@
 #include <semaphore.h>
 #include <pthread.h>
 
+//declaring global variables to use in multiple functions 
 sem_t empty;
 sem_t full;
 pthread_mutex_t lock;
@@ -12,6 +13,7 @@ struct process *head = NULL;
 int avgresponse = 0;
 int avgturnaround = 0;
 
+//function to add to the list according to burst time in non decreasing order 
 struct process *add(struct process *head, struct process *next) {
     if (head == NULL) {
         return next;
@@ -34,6 +36,7 @@ struct process *add(struct process *head, struct process *next) {
     }
 }
 
+//function that uses temp to save the current head and return it and then make head point to the next thing
 struct process *getprocess(struct process **head) {
     struct process *temp = NULL;
     temp = *head;
@@ -41,6 +44,10 @@ struct process *getprocess(struct process **head) {
     return temp;
 }
 
+/*producer thread, it produces specified number of processes and adds them to the list, uses a semaphore to
+ * alert consuemr that there is something produced (and it produces up to the buffer size, uses mutex
+ * lock when accessing head to prevent it from being changed or used by other functions
+ **/
 void *threadproduce(){
     struct process *next = NULL;
     int processcounter = 0;
@@ -56,6 +63,10 @@ void *threadproduce(){
     pthread_exit(NULL);
 }
 
+/*consumer thread, it consumes the specified number of processes, it wakes up after it has been notified by
+ * the producer using a semaphore. The consumer fetches the head of the linked list (using a mutex), simulates 
+ * SJFprocess, calculates the response and turnaround time and prints it out. It frees the struct in the end
+ */
 void *threadconsume(){
     struct timeval oTimeEnd;
     struct timeval oTimeStart;
@@ -65,11 +76,11 @@ void *threadconsume(){
     struct process *proc = NULL;
     for(int consumed = 0; consumed < NUMBER_OF_PROCESSES; consumed++){
         sem_wait(&full);
-
+        
         pthread_mutex_lock(&lock);
         proc = getprocess(&head);
         pthread_mutex_unlock(&lock);
-
+        
         prevburst = proc->iBurstTime;
         simulateSJFProcess(proc, &oTimeStart, &oTimeEnd);
         turnaroundtime = getDifferenceInMilliSeconds(proc->oTimeCreated, oTimeEnd);
@@ -85,6 +96,10 @@ void *threadconsume(){
 }
 
 int main(void) {
+    /* initializing two semaphores, one to restrict making processes above buffer size and one to keep a track
+     * of how many processes are there for the consumer to consume and also synchronize them so producer can
+     * produce first and then wake up consumer to consume 
+     * */
     sem_init(&empty, 0, BUFFER_SIZE);
     sem_init(&full, 0, 0);
 
