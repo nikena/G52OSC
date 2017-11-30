@@ -7,12 +7,15 @@
 
 sem_t empty;
 sem_t full;
+
 pthread_mutex_t lock;
+
 struct process *head = NULL;
 int avgresponse = 0;
 int avgturnaround = 0;
 int consumed = 0;
 
+//function to add to the list according to non decreasing burst time
 struct process *add(struct process *head, struct process *next) {
     if (head == NULL) {
         return next;
@@ -35,6 +38,7 @@ struct process *add(struct process *head, struct process *next) {
     }
 }
 
+//function using temp to save the current head and make head of the lest to point to the next thing
 struct process *getprocess(struct process **head) {
     struct process *temp = NULL;
     temp = *head;
@@ -42,6 +46,9 @@ struct process *getprocess(struct process **head) {
     return temp;
 }
 
+/*producer thread to produce specified number of processes and alert/wake up consumer after something has been 
+ * produced, also uses mutex where we add to the list so it can't be interrupted or head value won't be changed
+ */
 void *threadproduce(){
     struct process *next = NULL;
     int processcounter = 0;
@@ -51,12 +58,18 @@ void *threadproduce(){
         pthread_mutex_lock(&lock);
         head = add(head,next);
         pthread_mutex_unlock(&lock);
-        processcounter++;
         sem_post(&full);
+        processcounter++;
     }
     pthread_exit(NULL);
 }
 
+/*consumer thread that wakes up after a sem_post from producer, uses a while loop to consume all processes up to
+ * the specified number of processes, then if linked list is not empty, it gets the head of the list, simulates
+ * SJFprocess, calculates the response and turnaround time and frees the sturct in the end. If head is null 
+ * which means that the linked list is empty, the first consumer to check for that will wake up the next one 
+ * before it exits so all 5 consumers can exit
+ * */
 void *threadconsume(void * cindex){
     int consumer_id = *(int*) cindex;
     struct timeval oTimeEnd;
@@ -94,11 +107,12 @@ void *threadconsume(void * cindex){
     pthread_exit(NULL);
 }
 
+
 int main(void) {
     sem_init(&empty, 0, BUFFER_SIZE);
     sem_init(&full, 0, 0);
 
-    pthread_mutex_init(&lock,NULL);
+    pthread_mutex_init(&lock, NULL);
 
     pthread_t producer;
     pthread_t c[NUMBER_OF_CONSUMERS];
