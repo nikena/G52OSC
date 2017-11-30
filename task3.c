@@ -97,7 +97,6 @@ void *threadconsume(void * cindex){
             responsetime = getDifferenceInMilliSeconds(proc->oTimeCreated, oTimeStart);
             sumresponse += responsetime;
             sumturnaround += turnaroundtime; 
-            printf("sumresponse is %d and sumturnaround is %d\n", sumresponse, sumturnaround);
             printf("Consumer Id = %d, Process Id = %d, Previous Burst Time = %d, New Burst Time = %d, Response Time = %ld, Turn Around Time = %ld\n",
              consumer_id, proc->iProcessId, prevburst, proc->iBurstTime, responsetime, turnaroundtime);
             free(proc);
@@ -106,7 +105,6 @@ void *threadconsume(void * cindex){
 
         pthread_mutex_lock(&lock);
         if(head == NULL) {
-            printf("Consumer %d quitting and sumresponse is %d and sumturnaround is %d\n", consumer_id, sumresponse, sumturnaround);
             avgresponse += sumresponse;
             avgturnaround += sumturnaround;
             pthread_mutex_unlock(&lock);
