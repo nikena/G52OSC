@@ -3,18 +3,18 @@
 #include <stdio.h>
 #include <sys/time.h>
 
+//declaring global variables to use in my functions
 struct process *head = NULL;
 struct process *next = NULL;
 struct process *tail = NULL;
- 
-long int responsetime = 0;
-int avgresponsetime = 0;
+
 long int turnaroundtime = 0;
-int avgturnaroundtime =0;
+long int responsetime = 0;
 int prevburst = 0;
 int newburst = 0;
 int state = 0;
 
+//function to add to the tail of the linked list
 void add(struct process **head, struct process *next, struct process **tail) {
     if (*head == NULL) {
         *head = next;
@@ -27,6 +27,7 @@ void add(struct process **head, struct process *next, struct process **tail) {
     }
 }
 
+//stuct to separate a process from the head of the list and make it point to the next thing
 struct process *getprocess(struct process **head) {
     struct process *temp = NULL;
     temp = *head;
@@ -34,8 +35,9 @@ struct process *getprocess(struct process **head) {
     return temp;
 }
 
+//Print function that is checking if it is ready, if it has run before (state = 0) and if it is new and finished
 void print() {
-    if (head->iState != FINISHED) {
+    if (head->iState == READY) {
         printf("Process Id = %d, Previous Burst Time = %d, New Burst Time = %d, Response time = %ld\n", head->iProcessId, prevburst, newburst, responsetime);
 
      } else if(state == 1){
@@ -48,15 +50,20 @@ void print() {
 
 int main(void) {
     struct timeval oTimeEnd;
+    struct timeval oTimeStart;
     struct process *temp = NULL;
+    int avgresponsetime = 0;
+    int avgturnaroundtime =0;
 
+    //generating processes and adding them to the list
     for(int n = 0; n<NUMBER_OF_PROCESSES; n++) {
         next = generateProcess();
         add(&head,next,&tail);  
     }
     
     while(head != NULL) {
-
+        
+        //if state = 1, the process is new, if 0 it has run before
         if(head->iState == NEW){
             state = 1;
         } else {
@@ -65,15 +72,16 @@ int main(void) {
 
         prevburst = head->iBurstTime;
 
-        simulateRoundRobinProcess(head, &(head->oTimeCreated), &(oTimeEnd));
+        simulateRoundRobinProcess(head, &(oTimeStart), &(oTimeEnd));
 
         newburst = head-> iBurstTime;
-        turnaroundtime += getDifferenceInMilliSeconds(head->oTimeCreated, oTimeEnd);
-        responsetime = turnaroundtime -(prevburst-newburst);
+        turnaroundtime = getDifferenceInMilliSeconds(head->oTimeCreated, oTimeEnd);
+        responsetime = getDifferenceInMilliSeconds(head->oTimeCreated, oTimeStart);
 
         print();
-
-        if(head->iState != FINISHED) {
+            
+        //adding to the avgresponse time and avgturnaround time according to different states and also if processes state is ready - adding it back to the list, if finished - freeing the process
+        if(head->iState == READY) {
             avgresponsetime += responsetime;
             next = getprocess(&head);
             add(&head, next, &tail);
