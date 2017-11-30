@@ -15,6 +15,7 @@ struct process *head = NULL;
 int avgresponse = 0;
 int avgturnaround = 0;
 
+//function to add to the tail to the linked list
 void add(struct process **head, struct process *next, struct process **tail) {
     if (*head == NULL) {
         *head = next;
@@ -27,6 +28,7 @@ void add(struct process **head, struct process *next, struct process **tail) {
     }
 }
 
+//function that uses temp to save the current head and then makes head to point to the next thing in list
 struct process *getprocess(struct process **head) {
     struct process *temp = NULL;
     temp = *head;
@@ -35,10 +37,12 @@ struct process *getprocess(struct process **head) {
     return temp;
 }
 
-
+/*function to print result according to if it has uses its time slice and is back to Ready state, if it has run
+for the first time and has finished (state = 1) or if it has run at least two times (state = 0)
+*/
 void print (int processid, int istate, int previous, int new, int state, int id, long int turnaround, long int response){
-    if (istate != FINISHED) {
-        printf("Consumer Id = %d, Process Id = %d, Previous Burst Time =%d, New Burst Time = %d, Response time = %ld\n", id, processid, previous, new, response);
+    if (istate == READY) {
+        printf("Consumer Id = %d, Process Id = %d, Previous Burst Time = %d, New Burst Time = %d, Response time = %ld\n", id, processid, previous, new, response);
 
     } else if (state == 1){
         printf("Consumer Id = %d, Process Id = %d, Previous Burst Time = %d, New Burst Time = %d,  Response time = %ld, Turn Around time = %ld\n", id, processid, previous, new, response, turnaround);
@@ -48,6 +52,9 @@ void print (int processid, int istate, int previous, int new, int state, int id,
     }
 }
 
+/*producer thread that produces number of specified processes and wakes up consumer, it uses mutex to prevent 
+ * something interrupting when accessing a global variable or preventing it from changing value meanwhile 
+ */
 void *threadproduce(){
     struct process *next = NULL;
     int a = 0;
@@ -62,7 +69,17 @@ void *threadproduce(){
     }
     pthread_exit(NULL);
 }
- 
+
+/*consumer thread(takes a void pointer to the consumer id) that uses a while(1) loop , gets woken up by producer
+ * checks if head is null and if it is
+ * it then adds every consumer's own sum of the response and turnaround time to the global avgresponse/turnaround
+ * time, tells the other threads that they can exit using a sem_post and then exits. If head is not null it then
+ * gets a process, and assignes a state to it according to being new process or not, simulates round robin
+ * and calculates response and turnaround time, adds the response when the process is new and turnaround time
+ * when process is either new and finished with one iterration or if it has run more times and it finished.
+ * if process hasn;t finished, it gets added back to the queue and tells consumer thread something is in there
+ * and if it has finished then it frees the struct and wakes up producer to produce if buffer is less than 5
+ */
 void *threadconsume(void * cindex){
     int processid = 0;
     int prevburst = 0; 
@@ -108,16 +125,15 @@ void *threadconsume(void * cindex){
             responsetime = getDifferenceInMilliSeconds(proc->oTimeCreated, oTimeStart);
             print(processid, istate, prevburst, newburst, state, consumer_id, turnaroundtime, responsetime);
 
-            if(proc->iState != FINISHED){
+            if(state == 1) {
                 sumresponse += responsetime;
-            } else if(state == 1) {
-                sumresponse += responsetime;
+            } else if(state == 1 && proc->iState == FINISHED){
                 sumturnaround += turnaroundtime;
-            } else {
+            } else if(proc->iState == FINISHED) {
                 sumturnaround += turnaroundtime;
             }
 
-            if(proc->iState != FINISHED) {
+            if(proc->iState == READY) {
                pthread_mutex_lock(&lock);
                add(&head, proc, &tail);
                sem_post(&full);
