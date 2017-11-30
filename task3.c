@@ -78,12 +78,14 @@ void *threadconsume(void * cindex){
     long int turnaroundtime = 0;
     int prevburst = 0;
     struct process *proc = NULL;
-    while(consumed<NUMBER_OF_PROCESSES){
+    int sumresponse = 0;
+    int sumturnaround = 0;
+    while(1){
         sem_wait(&full);
     
+        pthread_mutex_lock(&lock);
         if(head!=NULL){
 
-            pthread_mutex_lock(&lock);
             proc = getprocess(&head);
             consumed++;
             pthread_mutex_unlock(&lock);
@@ -93,18 +95,26 @@ void *threadconsume(void * cindex){
             simulateSJFProcess(proc, &oTimeStart, &oTimeEnd);
             turnaroundtime = getDifferenceInMilliSeconds(proc->oTimeCreated, oTimeEnd);
             responsetime = getDifferenceInMilliSeconds(proc->oTimeCreated, oTimeStart);
-            avgresponse += responsetime;
-            avgturnaround += turnaroundtime;
+            sumresponse += responsetime;
+            sumturnaround += turnaroundtime; 
+            printf("sumresponse is %d and sumturnaround is %d\n", sumresponse, sumturnaround);
             printf("Consumer Id = %d, Process Id = %d, Previous Burst Time = %d, New Burst Time = %d, Response Time = %ld, Turn Around Time = %ld\n",
              consumer_id, proc->iProcessId, prevburst, proc->iBurstTime, responsetime, turnaroundtime);
             free(proc);
+        } 
+        pthread_mutex_unlock(&lock);
 
-        } else {
-
+        pthread_mutex_lock(&lock);
+        if(head == NULL) {
+            printf("Consumer %d quitting and sumresponse is %d and sumturnaround is %d\n", consumer_id, sumresponse, sumturnaround);
+            avgresponse += sumresponse;
+            avgturnaround += sumturnaround;
+            pthread_mutex_unlock(&lock);
             sem_post(&full);
+            pthread_exit(NULL);
         }
+        pthread_mutex_unlock(&lock);
     }
-    pthread_exit(NULL);
 }
 
 
