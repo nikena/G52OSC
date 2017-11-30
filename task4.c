@@ -8,7 +8,11 @@
 
 sem_t empty;
 sem_t full;
+
 pthread_mutex_t lock;
+//additional lock for when I am printing 
+pthread_mutex_t p;
+
 struct process *tail = NULL;
 struct process *head = NULL;
 
@@ -123,12 +127,12 @@ void *threadconsume(void * cindex){
             istate = proc->iState;
             turnaroundtime = getDifferenceInMilliSeconds(proc->oTimeCreated, oTimeEnd);
             responsetime = getDifferenceInMilliSeconds(proc->oTimeCreated, oTimeStart);
+            pthread_mutex_lock(&p);
             print(processid, istate, prevburst, newburst, state, consumer_id, turnaroundtime, responsetime);
+            pthread_mutex_unlock(&p);
 
             if(state == 1) {
                 sumresponse += responsetime;
-            } else if(state == 1 && proc->iState == FINISHED){
-                sumturnaround += turnaroundtime;
             } else if(proc->iState == FINISHED) {
                 sumturnaround += turnaroundtime;
             }
@@ -152,7 +156,8 @@ int main(void) {
     sem_init(&empty, 0, BUFFER_SIZE);
     sem_init(&full, 0, 0);
 
-    pthread_mutex_init(&lock,NULL);
+    pthread_mutex_init(&lock, NULL);
+    pthread_mutex_init(&p, NULL);
 
     pthread_t producer;
     pthread_t c[NUMBER_OF_CONSUMERS];
