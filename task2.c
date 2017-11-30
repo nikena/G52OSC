@@ -10,8 +10,6 @@ sem_t empty;
 sem_t full;
 pthread_mutex_t lock;
 struct process *head = NULL;
-int avgresponse = 0;
-int avgturnaround = 0;
 
 //function to add to the list according to burst time in non decreasing order 
 struct process *add(struct process *head, struct process *next) {
@@ -57,11 +55,18 @@ void *threadproduce(){
         pthread_mutex_lock(&lock);
         head = add(head,next);
         pthread_mutex_unlock(&lock);
-        processcounter++;
         sem_post(&full);
+        processcounter++;
     }
     pthread_exit(NULL);
 }
+
+//function to print avg response and turnaround time 
+void printavg(int sumresponse, int sumturnaround){
+    printf("Average response time = %f \nAverage turnaround time = %f\n",
+            (1.0* sumresponse/NUMBER_OF_PROCESSES), (1.0* sumturnaround/NUMBER_OF_PROCESSES));
+}
+    
 
 /*consumer thread, it consumes the specified number of processes, it wakes up after it has been notified by
  * the producer using a semaphore. The consumer fetches the head of the linked list (using a mutex), simulates 
@@ -70,16 +75,21 @@ void *threadproduce(){
 void *threadconsume(){
     struct timeval oTimeEnd;
     struct timeval oTimeStart;
-    long int responsetime = 0;
+    long int responsetime = 0; 
     long int turnaroundtime = 0;
+    int avgresponse = 0;
+    int avgturnaround = 0;
     int prevburst = 0;
     struct process *proc = NULL;
+
     for(int consumed = 0; consumed < NUMBER_OF_PROCESSES; consumed++){
         sem_wait(&full);
         
         pthread_mutex_lock(&lock);
         proc = getprocess(&head);
         pthread_mutex_unlock(&lock);
+
+        sem_post(&empty);
         
         prevburst = proc->iBurstTime;
         simulateSJFProcess(proc, &oTimeStart, &oTimeEnd);
@@ -90,8 +100,8 @@ void *threadconsume(){
         printf("Process Id = %d, Previous Burst Time = %d, New Burst Time = %d, Response Time = %ld, Turn Around Time = %ld\n",
                 proc->iProcessId, prevburst, proc->iBurstTime, responsetime, turnaroundtime);
         free(proc);
-        sem_post(&empty);
     }
+    printavg(avgresponse, avgturnaround);
     pthread_exit(NULL);
 }
 
@@ -114,7 +124,5 @@ int main(void) {
     pthread_join(producer, NULL);
     pthread_join(consumer, NULL);
     
-    printf("Average response time = %f \nAverage turnaround time = %f\n",
-            (1.0* avgresponse/NUMBER_OF_PROCESSES), (1.0* avgturnaround/NUMBER_OF_PROCESSES));
-    exit(EXIT_SUCCESS);
+   exit(EXIT_SUCCESS);
 }
