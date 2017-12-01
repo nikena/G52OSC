@@ -4,8 +4,7 @@
 #include <sys/time.h>
 
 
-//implementing my add to the list function here
-//
+//implementing my add to the list function here (non decreasing buffer size order)
 struct process *add(struct process *head, struct process *next) {
     if (head == NULL) {
         return next;
