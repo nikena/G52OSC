@@ -48,17 +48,15 @@ struct process *getprocess(struct process **head) {
     return temp;
 }
 
-/* void function to print, it prints the consumer id, process id, previous and new burst for everything, after that according to different states it prints additional response time or turnaround time. When process is new (state = 1) and it used its timeslice so it goes to ready, i print only the response time, when process is new and finished, i print both response and turnaround time, when process is not new (state = 0) and finished - just turnaround
+/* void function to print, it prints the consumer id, process id, previous and new burst for everything, after that according to different states it prints additional response time or turnaround time. When process is new (state = 1) it prints only the response time, when process is finished, it prints turnaround time
  */
 void print (int processid, int istate, int previous, int new, int state, int id, long int turnaround, long int response){
-    fflush(stdout);
     printf("Consumer Id = %d, Process Id = %d, Previous Burst Time = %d, New Burst Time = %d", id, processid, previous, new);
-    if (state == 1 && istate == READY) {
-        printf(" Response time = %ld", response);
-    } else if (state == 1 && istate == FINISHED){
-        printf(" Response time = %ld, Turn Around time = %ld", response, turnaround);
-    } else if (state == 0 && istate == FINISHED){
-        printf(" Turn Around Time = %ld", turnaround);
+    if (state == 1) {
+        printf(", Response time = %ld", response);
+    }
+    else if (istate == FINISHED){
+        printf(", Turn Around time = %ld", turnaround);
     } 
     
     printf("\n");

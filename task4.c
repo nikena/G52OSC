@@ -41,19 +41,18 @@ struct process *getprocess(struct process **head) {
     return temp;
 }
 
-/*function to print result according to if it has uses its time slice and is back to Ready state, if it has run
-for the first time and has finished (state = 1) or if it has run at least two times (state = 0)
+/*function to print result according to if it has run
+for the first time (state = 1) , printing only response time or if it has finished, printing turn around time
 */
 void print (int processid, int istate, int previous, int new, int state, int id, long int turnaround, long int response){
-    if (istate == READY) {
-        printf("Consumer Id = %d, Process Id = %d, Previous Burst Time = %d, New Burst Time = %d, Response time = %ld\n", id, processid, previous, new, response);
-
-    } else if (state == 1){
-        printf("Consumer Id = %d, Process Id = %d, Previous Burst Time = %d, New Burst Time = %d,  Response time = %ld, Turn Around time = %ld\n", id, processid, previous, new, response, turnaround);
-        
-    } else {
-        printf("Consumer Id = %d, Process Id = %d, Previous Burst Time = %d, New Burst Time = %d, Turn Around Time = %ld\n", id, processid, previous, new, turnaround);
+    printf("Consumer Id = %d, Process Id = %d, Previous Burst Time = %d, New Burst Time = %d", id, processid, previous, new);
+    if (state == 1) {
+        printf(", Response time = %ld", response);
     }
+    if (istate == FINISHED){
+        printf(", Turn Around time = %ld", turnaround);
+    }
+    printf("\n");    
 }
 
 /*producer thread that produces number of specified processes and wakes up consumer, it uses mutex to prevent 
