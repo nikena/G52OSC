@@ -81,8 +81,9 @@ void *threadconsume(){
     int avgturnaround = 0;
     int prevburst = 0;
     struct process *proc = NULL;
-
-    for(int consumed = 0; consumed < NUMBER_OF_PROCESSES; consumed++){
+    
+    int consumed = 0;
+    for(consumed = 0; consumed < NUMBER_OF_PROCESSES; consumed++){
         sem_wait(&full);
         
         pthread_mutex_lock(&lock);

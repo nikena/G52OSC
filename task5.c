@@ -254,7 +254,8 @@ int main(void) {
     pthread_create(&producer, NULL, threadproduce, NULL);
 
     int consumerid[NUMBER_OF_CONSUMERS];
-    for (int i = 0; i < NUMBER_OF_CONSUMERS; i++) {
+    int i = 0;
+    for (i = 0; i < NUMBER_OF_CONSUMERS; i++) {
         consumerid[i] = i;
         pthread_create(&(c[i]), NULL, threadconsume, (void *) &consumerid[i]);
     }
@@ -265,8 +266,9 @@ int main(void) {
     pthread_join(eventManager, NULL);
 
     sem_post(&full);   
-
-    for(int n = 0; n < NUMBER_OF_CONSUMERS; n++) {
+    
+    int n = 0;
+    for(n = 0; n < NUMBER_OF_CONSUMERS; n++) {
         pthread_join(c[n], NULL);
     }
 

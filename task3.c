@@ -129,7 +129,7 @@ int main(void) {
 
     int numofconsumers = 0;
     int consumerid[NUMBER_OF_CONSUMERS];
-    for(numofconsumers; numofconsumers < NUMBER_OF_CONSUMERS; numofconsumers ++){
+    for(numofconsumers = 0; numofconsumers < NUMBER_OF_CONSUMERS; numofconsumers ++){
          consumerid[numofconsumers] = numofconsumers;
          pthread_create(&c[numofconsumers], NULL, threadconsume, (void *) &consumerid[numofconsumers]);
     }

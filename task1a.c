@@ -51,7 +51,8 @@ int main(void) {
     int prevburst = 0;
 
     //generating a process and adding it to the list
-    for(int n = 0; n<NUMBER_OF_PROCESSES; n++) {
+    int n = 0;
+    for(n = 0; n<NUMBER_OF_PROCESSES; n++) {
        next = generateProcess();
        head= add(head,next);
     }
