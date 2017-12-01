@@ -56,7 +56,8 @@ int main(void) {
     int avgturnaroundtime =0;
 
     //generating processes and adding them to the list
-    for(int n = 0; n<NUMBER_OF_PROCESSES; n++) {
+    int n = 0;
+    for(n = 0; n<NUMBER_OF_PROCESSES; n++) {
         next = generateProcess();
         add(&head,next,&tail);  
     }
